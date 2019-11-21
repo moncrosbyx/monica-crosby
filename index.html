@@ -1,0 +1,240 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <title>Leaflet Map</title>
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.0.3/dist/leaflet.css"/>
+  <style>
+  html { height:100%;}
+
+body {
+    height:100%;
+    padding: 0;
+    margin: 0;
+}
+
+#map {
+  width: 100%;
+  margin: 0 auto;
+  height: 95%;
+}
+
+#header {
+  margin-top: 0px;
+  margin-bottom: 0px;
+}
+
+
+.info {
+    z-index: 1000;
+    position: absolute;
+    right: 40%;
+    top: 5%;
+    padding: 6px 8px;
+    font: 14px Arial, Helvetica, sans-serif;
+    text-align: center;
+    background: white;
+    background: rgba(255, 255, 255, 0.8);
+    box-shadow: 0 0 15px rgba(0, 0, 0, 0.2);
+    border-radius: 5px;
+}
+
+.info h1 {
+    font-size: 16px;
+    margin: 0 0 5px;
+    color: #777777;
+}
+
+
+.legend {
+  line-height: 18px;
+  color: #333333;
+  font-family: 'Open Sans', Helvetica, sans-serif;
+  padding: 6px 8px;
+  background: white;
+  background: rgba(255,255,255,0.8);
+  box-shadow: 0 0 15px rgba(0,0,0,0.2);
+  border-radius: 5px;
+}
+
+.legend i {
+  width: 28px;
+  height: 18px;
+  float: left;
+  margin-right: 8px;
+  opacity: 0.7;
+}
+
+
+.legend p {
+  font-size: 12px;
+  line-height: 18px;
+  margin: 0;
+}
+
+</style>
+</head>
+<body>
+  <!-- Our web map and content will go here -->
+  <script src="https://unpkg.com/leaflet@1.0.3/dist/leaflet.js"></script>
+  <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.2.1/jquery.min.js"></script>
+  <div id="map" style="width: 1000px; height: 600px">
+  </div>
+  <script>
+
+      var map = L.map('map', {center: [39.981192, -75.155399], zoom: 10});
+      L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png', { attribution: '© OpenStreetMap' }).addTo(map);
+      map.doubleClickZoom.disable();
+
+      // add point marker
+      var myDataPoint = L.marker([39.981192, -75.155399]).addTo(map);
+      myDataPoint.bindPopup("This is Temple University.");
+      myDataPoint.bindPopup("<h3>Temple University</h3><p>Philadelphia, PA<br>Information about Temple University.</p>");
+
+      // Create an Empty Popup
+      var popup = L.popup();
+
+      // Write function to set Properties of the Popup
+      function onMapClick(e) {
+          popup
+              .setLatLng(e.latlng)
+              .setContent("You clicked the map at " + e.latlng.toString())
+              .openOn(map);
+      }
+
+      // Listen for a click event on the Map element
+      map.on('click', onMapClick);
+
+        // Set style function that sets fill color property equal to blood lead
+      function styleFunc(feature) {
+          return {
+              fillColor: setColorFunc(feature.properties.num_bll_5p),
+              fillOpacity: 0.9,
+              weight: 1,
+              opacity: 1,
+              color: '#ffffff',
+              dashArray: '3'
+          };
+      }
+// Set function for color ramp, you can use a better palette
+   function setColorFunc(density){
+            return density > 45 ? '#006400' :
+                   density > 30 ? '#556B2F' :
+                   density > 15 ? '#6B8E23' :
+                   density > 0 ? '#2E9B57' :
+                                 '#90EE90';
+        };
+
+     var neighborhoodsLayer = null;
+      $.getJSON("blood_lead.geojson",function(data){
+          neighborhoodsLayer = L.geoJson(data, {
+              style: styleFunc,
+              onEachFeature: function(feature, layer){
+                  layer.bindPopup('Blood lead level: '+feature.properties.num_bll_5p);
+                  layer.on({
+                          mouseover: highlightFeature,
+                          mouseout: resetHighlight,
+                          click: zoomFeature
+                      });
+              }
+          }).addTo(map).bringToBack();
+      });
+  L.control.scale({position: 'bottomleft'}).addTo(map);
+
+      // Create Leaflet Control Object for Legend
+      var legend = L.control({position: 'bottomright'});
+
+      // Function that runs when legend is added to map
+      legend.onAdd = function (map) {
+       // Create Div Element and Populate it with HTML
+        var div = L.DomUtil.create('div', 'legend');  
+         div.innerHTML += '<b>Blood lead level</b><br />';
+    div.innerHTML += 'by census tract<br />';
+    div.innerHTML += '<br>';
+    div.innerHTML += '<i style="background: #006400"></i><p>45+</p>';
+    div.innerHTML += '<i style="background: #556B2F"></i><p>30-45</p>';
+    div.innerHTML += '<i style="background: #6B8E23"></i><p>15-30</p>';
+    div.innerHTML += '<i style="background: #2E9B57"></i><p>0-15</p>';
+    div.innerHTML += '<hr>';
+    div.innerHTML += '<i style="background: #90EE90"></i><p>No Data</p>';
+
+      return div;
+      };
+
+      // Add Legend to Map
+      legend.addTo(map);
+    
+      // create a polyline
+
+      var myDataLine = L.polyline([[40.080922, -75.207875], 
+                                    [40.077375, -75.201967],
+                                    [40.073474, -75.196917],
+                                    [40.065221, -75.191110],
+                                    [40.062765, -75.185204],
+                                    [40.060498, -75.178856],
+                                    [40.051092, -75.171567],
+                                    [40.037719, -75.171922],
+                                    [40.036117, -75.161619],
+                                    [40.036117, -75.161619],
+                                    [39.981586, -75.149515]
+                                    ],
+                        {color: 'red', weight: 5}).addTo(map);
+  // Bind popup to line object
+        myDataLine.bindPopup("Chestnut Line") ;
+
+       var myDataLine = L.polyline ([[40.012906, -75.206327],
+                                    [40.010630, -75.201553],
+                                    [40.009266, -75.196929],
+                                    [40.007425, -75.192422],
+                                    [40.003259, -75.190384],
+                                    [39.997645, -75.190856],
+                                    [39.993193, -75.193238],
+                                    [39.992200, -75.194654],
+                                    [39.984420, -75.203162],
+                                    [39.975733, -75.191931],
+                                    [39.970076,-75.189206],
+                                    [39.964600, -75.179389]
+                                    ],
+                                    {color: 'blue', weight: 5}).addto(map);
+       myDataLine.bindPopup("Kelly Drive");
+  
+        // Write function to set Properties of the Popup
+        function onMapClick(e) {
+            popup
+                .setLatLng(e.latlng)
+                .setContent("You clicked the map at " + e.latlng.toString())
+                .openOn(map);
+        }
+        
+        // Listen for a click event on the Map element
+        map.on('click', onMapClick);
+      function highlightFeature(e){
+          var layer = e.target;
+
+          layer.setStyle({
+              weight: 5,
+              color: '#666',
+              dashArray: '',
+              fillOpacity: 0.7
+          });
+          // for different web browsers
+          if (!L.Browser.ie && !L.Browser.opera && !L.Browser.edge) {
+              layer.bringToFront();
+          }
+      }
+L.control.scale({position: 'bottomleft'}).addTo(map);
+
+      // Define what happens on mouseout:
+      function resetHighlight(e) {
+      neighborhoodsLayer.resetStyle(e.target);
+      }
+
+      // As an additional touch, let’s define a click listener that zooms to the state:
+      function zoomFeature(e){
+      console.log(e.target.getBounds());
+      map.fitBounds(e.target.getBounds().pad(1.5));
+      }
+
+  </script>
+</body>
+</html>
